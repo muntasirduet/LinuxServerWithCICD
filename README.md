@@ -160,7 +160,8 @@ CREATE USER myuser WITH PASSWORD 'REPLACE_STRONG_DB_PASSWORD';
 CREATE DATABASE myappdb OWNER myuser;
 GRANT ALL PRIVILEGES ON DATABASE myappdb TO myuser;
 SQL
-sudo -u postgres psql -c "\password myuser"
+# Optional: rotate password interactively later
+# sudo -u postgres psql -c "\password myuser"
 ```
 
 ### Connection string and secret configuration (recommended)
@@ -336,12 +337,15 @@ Already configured in `myapp.service`:
 ### Backup strategy
 - Database backup (daily cron example):
   ```bash
-  # run backup as myapp user (one-time setup for non-interactive backups)
+  # recommended: use AWS Secrets Manager/SSM Parameter Store for DB credentials
+  # fallback example: run backup as myapp user with .pgpass
   sudo mkdir -p /var/www/myapp/.secrets
+  sudo mkdir -p /var/www/myapp/backups
+  sudo chown -R myapp:myapp /var/www/myapp/backups
   sudo install -m 600 -o myapp -g myapp /dev/null /var/www/myapp/.secrets/.pgpass
   sudo -u myapp nano /var/www/myapp/.secrets/.pgpass
   # file content: localhost:5432:myappdb:myuser:REPLACE_STRONG_DB_PASSWORD
-  sudo -u myapp env PGPASSFILE=/var/www/myapp/.secrets/.pgpass pg_dump -U myuser -h localhost myappdb | gzip | sudo tee /var/backups/myappdb_$(date +%F).sql.gz >/dev/null
+  sudo -u myapp env PGPASSFILE=/var/www/myapp/.secrets/.pgpass sh -c 'pg_dump -U myuser -h localhost myappdb | gzip > /var/www/myapp/backups/myappdb_$(date +%F).sql.gz'
   ```
 - Keep app configuration backups:
   - `/etc/systemd/system/myapp.service.d/override.conf`
