@@ -119,8 +119,8 @@ sudo chown -R myapp:myapp /var/www/myapp /var/log/myapp
 sudo mkdir -p /opt/src
 sudo chown ec2-user:ec2-user /opt/src
 cd /opt/src
-git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git LinuxServerWithCICD
-cd /opt/src/LinuxServerWithCICD
+git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git myapp
+cd /opt/src/myapp
 ```
 > Set the clone URL to your own repository/fork.
 
@@ -134,7 +134,7 @@ dotnet publish src/MyApp.Api -c Release -o ./publish --no-build
 
 ### Deploy published files and permissions
 ```bash
-sudo rsync -av --delete /opt/src/LinuxServerWithCICD/publish/ /var/www/myapp/
+sudo rsync -av --delete /opt/src/myapp/publish/ /var/www/myapp/
 sudo chown -R myapp:myapp /var/www/myapp
 sudo find /var/www/myapp -type d -exec chmod 755 {} \;
 sudo find /var/www/myapp -type f -exec chmod 644 {} \;
@@ -155,25 +155,30 @@ sudo systemctl restart postgresql
 
 ### Create database and user
 ```bash
-cat >/tmp/myapp-db-init.sql <<'SQL'
-CREATE USER myuser WITH PASSWORD 'REPLACE_STRONG_DB_PASSWORD';
+sudo -u postgres psql <<'SQL'
+CREATE USER myuser;
 CREATE DATABASE myappdb OWNER myuser;
 GRANT ALL PRIVILEGES ON DATABASE myappdb TO myuser;
 SQL
-chmod 600 /tmp/myapp-db-init.sql
-sudo -u postgres psql -f /tmp/myapp-db-init.sql
-rm -f /tmp/myapp-db-init.sql
+sudo -u postgres psql -c "\password myuser"
 ```
 
-### Connection string configuration
-Update `/var/www/myapp/appsettings.Production.json`:
+### Connection string and secret configuration (recommended)
+Use environment variables instead of storing secrets in files:
+```bash
+sudo mkdir -p /etc/systemd/system/myapp.service.d
+sudo tee /etc/systemd/system/myapp.service.d/override.conf >/dev/null <<'EOF'
+[Service]
+Environment="ConnectionStrings__Default=Host=localhost;Database=myappdb;Username=myuser;Password=REPLACE_STRONG_DB_PASSWORD"
+Environment="Jwt__Key=REPLACE_WITH_BASE64_ENCODED_32_BYTE_KEY"
+EOF
+sudo systemctl daemon-reload
+```
+
+For non-secret values, update `/var/www/myapp/appsettings.Production.json`:
 ```json
 {
-  "ConnectionStrings": {
-    "Default": "Host=localhost;Database=myappdb;Username=myuser;Password=REPLACE_STRONG_DB_PASSWORD"
-  },
   "Jwt": {
-    "Key": "REPLACE_WITH_BASE64_ENCODED_32_BYTE_KEY",
     "Issuer": "MyApp",
     "Audience": "MyAppUsers"
   },
@@ -188,7 +193,7 @@ openssl rand -base64 32
 ### Run EF Core migrations
 This repository may not include migrations yet. If needed:
 ```bash
-cd /opt/src/LinuxServerWithCICD
+cd /opt/src/myapp
 dotnet tool install --global dotnet-ef
 export PATH="$PATH:$HOME/.dotnet/tools"
 dotnet ef migrations add InitialCreate --project src/MyApp.Infrastructure --startup-project src/MyApp.Api
@@ -200,7 +205,7 @@ dotnet ef database update --project src/MyApp.Infrastructure --startup-project s
 ### Reverse proxy configuration
 Copy template and edit domain:
 ```bash
-sudo cp /opt/src/LinuxServerWithCICD/deploy/nginx/myapp.conf /etc/nginx/conf.d/myapp.conf
+sudo cp /opt/src/myapp/deploy/nginx/myapp.conf /etc/nginx/conf.d/myapp.conf
 sudo nano /etc/nginx/conf.d/myapp.conf
 ```
 
@@ -250,7 +255,7 @@ sudo systemctl restart nginx
 
 Copy existing template:
 ```bash
-sudo cp /opt/src/LinuxServerWithCICD/deploy/linux/myapp.service /etc/systemd/system/myapp.service
+sudo cp /opt/src/myapp/deploy/linux/myapp.service /etc/systemd/system/myapp.service
 sudo systemctl daemon-reload
 sudo systemctl enable myapp
 sudo systemctl start myapp
@@ -331,12 +336,14 @@ Already configured in `myapp.service`:
 - Database backup (daily cron example):
   ```bash
   # run backup as myapp user (one-time setup for non-interactive backups)
-  sudo -u myapp sh -c 'echo "localhost:5432:myappdb:myuser:REPLACE_STRONG_DB_PASSWORD" > /home/myapp/.pgpass'
-  sudo chown myapp:myapp /home/myapp/.pgpass
-  sudo chmod 600 /home/myapp/.pgpass
-  sudo -u myapp pg_dump -U myuser -h localhost myappdb | gzip > /var/backups/myappdb_$(date +%F).sql.gz
+  sudo mkdir -p /var/www/myapp/.secrets
+  sudo -u myapp nano /var/www/myapp/.secrets/.pgpass
+  # file content: localhost:5432:myappdb:myuser:REPLACE_STRONG_DB_PASSWORD
+  sudo chmod 600 /var/www/myapp/.secrets/.pgpass
+  sudo -u myapp env PGPASSFILE=/var/www/myapp/.secrets/.pgpass pg_dump -U myuser -h localhost myappdb | gzip > /var/backups/myappdb_$(date +%F).sql.gz
   ```
 - Keep app configuration backups:
+  - `/etc/systemd/system/myapp.service.d/override.conf`
   - `/var/www/myapp/appsettings.Production.json`
   - `/etc/nginx/nginx.conf`
   - `/etc/nginx/conf.d/myapp.conf`
@@ -349,7 +356,8 @@ Already configured in `myapp.service`:
   - Check app: `sudo systemctl status myapp`
   - Check app port: `sudo ss -ltnp | grep 5000`
 - **App crash on startup:**
-  - Validate config/JWT/connection string in `appsettings.Production.json`
+  - Validate service secrets in `/etc/systemd/system/myapp.service.d/override.conf`
+  - Validate non-secret config in `appsettings.Production.json`
   - Check logs: `sudo journalctl -u myapp -n 200 --no-pager`
 - **Database connection failed:**
   - Confirm PostgreSQL running: `sudo systemctl status postgresql`
