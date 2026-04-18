@@ -170,7 +170,7 @@ Use environment variables instead of storing secrets in files:
 sudo mkdir -p /etc/systemd/system/myapp.service.d
 sudo tee /etc/systemd/system/myapp.service.d/override.conf >/dev/null <<'EOF'
 [Service]
-Environment="ConnectionStrings__Default=Server=localhost;Database=myappdb;User Id=myuser;Password=Akash123;TrustServerCertificate=True"
+Environment="ConnectionStrings__Default=Server=localhost;Database=myappdb;User Id=myuser;Password=REPLACE_STRONG_DB_PASSWORD;TrustServerCertificate=True"
 Environment="Jwt__Key=REPLACE_WITH_BASE64_ENCODED_32_BYTE_KEY"
 EOF
 sudo chmod 600 /etc/systemd/system/myapp.service.d/override.conf
