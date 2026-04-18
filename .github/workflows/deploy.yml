@@ -1,72 +1,80 @@
-name: Build and Deploy
+name: Build, Test, Deploy
 
 on:
   push:
-    branches: [ main ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main ]
-
-permissions: {}
+    branches: [main, develop]
 
 jobs:
-  build-and-test:
+  build-test:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
+    name: Build and Test
+    
     steps:
-      - uses: actions/checkout@v4
-
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
       - name: Setup .NET 8
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v3
         with:
           dotnet-version: '8.0.x'
-
+      
       - name: Restore dependencies
         run: dotnet restore
-
-      - name: Build
-        run: dotnet build --no-restore -c Release
-
+      
+      - name: Build solution (Release)
+        run: dotnet build -c Release --no-restore
+      
       - name: Run tests
-        run: dotnet test --no-build -c Release --verbosity normal
-
-      - name: Publish
+        run: dotnet test -c Release --no-build --verbosity normal
+      
+      - name: Publish application
         run: dotnet publish src/MyApp.Api -c Release -o ./publish --no-build
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: myapp-publish
-          path: ./publish
-
   deploy:
+    needs: build-test
     runs-on: ubuntu-latest
-    needs: build-and-test
-    if: github.ref == 'refs/heads/main'
-    permissions: {}
+    name: Deploy to Server
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
     steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v3
         with:
-          name: myapp-publish
-          path: ./publish
-
-      - name: Copy files to server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.SERVER_IP }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "./publish/*"
-          target: "/var/www/myapp"
-          strip_components: 1
-
-      - name: Restart service
-        uses: appleboy/ssh-action@v1.0.3
+          dotnet-version: '8.0.x'
+      
+      - name: Build for deployment
+        run: dotnet build -c Release
+      
+      - name: Publish application
+        run: dotnet publish src/MyApp.Api -c Release -o ./publish --no-build
+      
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SERVER_IP }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            sudo systemctl restart myapp
-            sudo systemctl status myapp
+            cd ~/projects/myapp
+            git pull origin main
+            dotnet restore
+            dotnet build -c Release
+            dotnet test -c Release
+            dotnet publish src/MyApp.Api -c Release -o ./publish --no-build
+            sudo systemctl restart nginx
+
+      - name: Verify deployment
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            sleep 5
+            curl -f http://localhost/health || exit 1
+            echo "Deployment successful!"
