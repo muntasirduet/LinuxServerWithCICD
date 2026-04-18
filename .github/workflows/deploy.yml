@@ -6,9 +6,13 @@ on:
   pull_request:
     branches: [ main ]
 
+permissions: {}
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -39,6 +43,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-and-test
     if: github.ref == 'refs/heads/main'
+    permissions: {}
     steps:
       - name: Download artifact
         uses: actions/download-artifact@v4

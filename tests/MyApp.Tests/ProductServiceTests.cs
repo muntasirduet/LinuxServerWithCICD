@@ -1,3 +1,4 @@
+using MyApp.Core.Interfaces;
 using MyApp.Core.Services;
 
 namespace MyApp.Tests;
@@ -7,7 +8,7 @@ public class ProductServiceTests
     [Fact]
     public void GetAll_ReturnsSeededProducts()
     {
-        var service = new ProductService();
+        IProductService service = new ProductService();
 
         var products = service.GetAll();
 
