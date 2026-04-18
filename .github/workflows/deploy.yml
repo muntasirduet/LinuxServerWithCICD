@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-test:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     name: Build and Test
     
     steps:
@@ -34,7 +34,7 @@ jobs:
 
   deploy:
     needs: build-test
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     name: Deploy to Server
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     
