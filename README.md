@@ -119,10 +119,10 @@ sudo chown -R myapp:myapp /var/www/myapp /var/log/myapp
 sudo mkdir -p /opt/src
 sudo chown ec2-user:ec2-user /opt/src
 cd /opt/src
-git clone https://github.com/muntasirduet/LinuxServerWithCICD.git
+git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git LinuxServerWithCICD
 cd /opt/src/LinuxServerWithCICD
 ```
-> If you forked this project, replace with your own repository URL (for example: `https://github.com/YOUR_ORG/YOUR_REPO.git`).
+> Set the clone URL to your own repository/fork.
 
 ### Build and publish
 ```bash
@@ -171,12 +171,16 @@ Update `/var/www/myapp/appsettings.Production.json`:
     "Default": "Host=localhost;Database=myappdb;Username=myuser;Password=REPLACE_STRONG_DB_PASSWORD"
   },
   "Jwt": {
-    "Key": "REPLACE_WITH_STRONG_RANDOM_SECRET_KEY_GENERATED_SECURELY",
+    "Key": "REPLACE_WITH_BASE64_256_BIT_RANDOM_KEY",
     "Issuer": "MyApp",
     "Audience": "MyAppUsers"
   },
   "AllowedOrigins": "https://yourdomain.com"
 }
+```
+Generate a strong key (minimum 32 bytes / 256 bits), for example:
+```bash
+openssl rand -base64 32
 ```
 
 ### Run EF Core migrations
@@ -324,6 +328,9 @@ Already configured in `myapp.service`:
 ### Backup strategy
 - Database backup (daily cron example):
   ```bash
+  # one-time setup for non-interactive backups
+  echo "localhost:5432:myappdb:myuser:REPLACE_STRONG_DB_PASSWORD" > ~/.pgpass
+  chmod 600 ~/.pgpass
   pg_dump -U myuser -h localhost myappdb | gzip > /var/backups/myappdb_$(date +%F).sql.gz
   ```
 - Keep app configuration backups:
