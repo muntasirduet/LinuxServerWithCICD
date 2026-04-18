@@ -155,13 +155,15 @@ sudo systemctl restart postgresql
 
 ### Create database and user
 ```bash
-sudo -u postgres psql <<'SQL'
+cat >/tmp/myapp-db-init.sql <<'SQL'
 CREATE USER myuser WITH PASSWORD 'REPLACE_STRONG_DB_PASSWORD';
 CREATE DATABASE myappdb OWNER myuser;
 GRANT ALL PRIVILEGES ON DATABASE myappdb TO myuser;
 SQL
+chmod 600 /tmp/myapp-db-init.sql
+sudo -u postgres psql -f /tmp/myapp-db-init.sql
+rm -f /tmp/myapp-db-init.sql
 ```
-> For production, avoid exposing passwords in shell history. Use a temporary SQL file with restricted permissions (`chmod 600`) and delete it after execution.
 
 ### Connection string configuration
 Update `/var/www/myapp/appsettings.Production.json`:
@@ -171,7 +173,7 @@ Update `/var/www/myapp/appsettings.Production.json`:
     "Default": "Host=localhost;Database=myappdb;Username=myuser;Password=REPLACE_STRONG_DB_PASSWORD"
   },
   "Jwt": {
-    "Key": "REPLACE_WITH_BASE64_256_BIT_RANDOM_KEY",
+    "Key": "REPLACE_WITH_BASE64_ENCODED_32_BYTE_KEY",
     "Issuer": "MyApp",
     "Audience": "MyAppUsers"
   },
@@ -328,10 +330,11 @@ Already configured in `myapp.service`:
 ### Backup strategy
 - Database backup (daily cron example):
   ```bash
-  # one-time setup for non-interactive backups
-  echo "localhost:5432:myappdb:myuser:REPLACE_STRONG_DB_PASSWORD" > ~/.pgpass
-  chmod 600 ~/.pgpass
-  pg_dump -U myuser -h localhost myappdb | gzip > /var/backups/myappdb_$(date +%F).sql.gz
+  # run backup as myapp user (one-time setup for non-interactive backups)
+  sudo -u myapp sh -c 'echo "localhost:5432:myappdb:myuser:REPLACE_STRONG_DB_PASSWORD" > /home/myapp/.pgpass'
+  sudo chown myapp:myapp /home/myapp/.pgpass
+  sudo chmod 600 /home/myapp/.pgpass
+  sudo -u myapp pg_dump -U myuser -h localhost myappdb | gzip > /var/backups/myappdb_$(date +%F).sql.gz
   ```
 - Keep app configuration backups:
   - `/var/www/myapp/appsettings.Production.json`
