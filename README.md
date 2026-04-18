@@ -122,6 +122,7 @@ cd /opt/src
 git clone https://github.com/muntasirduet/LinuxServerWithCICD.git
 cd /opt/src/LinuxServerWithCICD
 ```
+> If you forked this project, replace with your own repository URL (for example: `https://github.com/YOUR_ORG/YOUR_REPO.git`).
 
 ### Build and publish
 ```bash
@@ -160,6 +161,7 @@ CREATE DATABASE myappdb OWNER myuser;
 GRANT ALL PRIVILEGES ON DATABASE myappdb TO myuser;
 SQL
 ```
+> For production, avoid exposing passwords in shell history. Use a temporary SQL file with restricted permissions (`chmod 600`) and delete it after execution.
 
 ### Connection string configuration
 Update `/var/www/myapp/appsettings.Production.json`:
@@ -169,7 +171,7 @@ Update `/var/www/myapp/appsettings.Production.json`:
     "Default": "Host=localhost;Database=myappdb;Username=myuser;Password=REPLACE_STRONG_DB_PASSWORD"
   },
   "Jwt": {
-    "Key": "REPLACE_WITH_STRONG_SECRET_KEY_MIN_32_CHARS_1234",
+    "Key": "REPLACE_WITH_STRONG_RANDOM_SECRET_KEY_GENERATED_SECURELY",
     "Issuer": "MyApp",
     "Audience": "MyAppUsers"
   },
