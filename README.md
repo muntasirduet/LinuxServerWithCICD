@@ -156,12 +156,12 @@ sudo systemctl restart postgresql
 ### Create database and user
 ```bash
 sudo -u postgres psql <<'SQL'
-CREATE USER myuser WITH PASSWORD 'REPLACE_STRONG_DB_PASSWORD';
+CREATE USER myuser;
 CREATE DATABASE myappdb OWNER myuser;
 GRANT ALL PRIVILEGES ON DATABASE myappdb TO myuser;
 SQL
-# Optional: rotate password interactively later
-# sudo -u postgres psql -c "\password myuser"
+# Set password interactively (recommended, avoids exposing it in shell history)
+sudo -u postgres psql -c "\password myuser"
 ```
 
 ### Connection string and secret configuration (recommended)
@@ -173,6 +173,7 @@ sudo tee /etc/systemd/system/myapp.service.d/override.conf >/dev/null <<'EOF'
 Environment="ConnectionStrings__Default=Host=localhost;Database=myappdb;Username=myuser;Password=REPLACE_STRONG_DB_PASSWORD"
 Environment="Jwt__Key=REPLACE_WITH_BASE64_ENCODED_32_BYTE_KEY"
 EOF
+sudo chmod 600 /etc/systemd/system/myapp.service.d/override.conf
 sudo systemctl daemon-reload
 ```
 > Replace both placeholder values before starting/restarting `myapp`.
@@ -187,7 +188,7 @@ For non-secret values, update `/var/www/myapp/appsettings.Production.json`:
   "AllowedOrigins": "https://yourdomain.com"
 }
 ```
-Generate a strong key (minimum 32 bytes / 256 bits), for example:
+Generate a strong key (minimum 32 bytes or 256 bits), for example:
 ```bash
 openssl rand -base64 32
 ```
@@ -345,6 +346,7 @@ Already configured in `myapp.service`:
   sudo install -m 600 -o myapp -g myapp /dev/null /var/www/myapp/.secrets/.pgpass
   sudo -u myapp nano /var/www/myapp/.secrets/.pgpass
   # file content: localhost:5432:myappdb:myuser:REPLACE_STRONG_DB_PASSWORD
+  # never commit .pgpass to version control
   sudo -u myapp env PGPASSFILE=/var/www/myapp/.secrets/.pgpass sh -c 'pg_dump -U myuser -h localhost myappdb | gzip > /var/www/myapp/backups/myappdb_$(date +%F).sql.gz'
   ```
 - Keep app configuration backups:
