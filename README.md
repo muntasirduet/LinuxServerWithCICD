@@ -156,7 +156,7 @@ sudo systemctl restart postgresql
 ### Create database and user
 ```bash
 sudo -u postgres psql <<'SQL'
-CREATE USER myuser;
+CREATE USER myuser WITH PASSWORD 'REPLACE_STRONG_DB_PASSWORD';
 CREATE DATABASE myappdb OWNER myuser;
 GRANT ALL PRIVILEGES ON DATABASE myappdb TO myuser;
 SQL
@@ -174,6 +174,7 @@ Environment="Jwt__Key=REPLACE_WITH_BASE64_ENCODED_32_BYTE_KEY"
 EOF
 sudo systemctl daemon-reload
 ```
+> Replace both placeholder values before starting/restarting `myapp`.
 
 For non-secret values, update `/var/www/myapp/appsettings.Production.json`:
 ```json
@@ -337,10 +338,10 @@ Already configured in `myapp.service`:
   ```bash
   # run backup as myapp user (one-time setup for non-interactive backups)
   sudo mkdir -p /var/www/myapp/.secrets
+  sudo install -m 600 -o myapp -g myapp /dev/null /var/www/myapp/.secrets/.pgpass
   sudo -u myapp nano /var/www/myapp/.secrets/.pgpass
   # file content: localhost:5432:myappdb:myuser:REPLACE_STRONG_DB_PASSWORD
-  sudo chmod 600 /var/www/myapp/.secrets/.pgpass
-  sudo -u myapp env PGPASSFILE=/var/www/myapp/.secrets/.pgpass pg_dump -U myuser -h localhost myappdb | gzip > /var/backups/myappdb_$(date +%F).sql.gz
+  sudo -u myapp env PGPASSFILE=/var/www/myapp/.secrets/.pgpass pg_dump -U myuser -h localhost myappdb | gzip | sudo tee /var/backups/myappdb_$(date +%F).sql.gz >/dev/null
   ```
 - Keep app configuration backups:
   - `/etc/systemd/system/myapp.service.d/override.conf`
