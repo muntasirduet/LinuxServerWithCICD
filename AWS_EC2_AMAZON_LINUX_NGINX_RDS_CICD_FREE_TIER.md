@@ -16,7 +16,7 @@ This guide is a **step-by-step** setup for running this project on **AWS Free Ti
 2. Name: `myapp-ec2`.
 3. AMI: **Amazon Linux 2023**.
 4. Instance type: **t2.micro** (Free Tier safe default).  
-   If your account/region supports free t3.micro offers, you can choose t3.micro.
+   Choose t3.micro only if your account has a specific free offer/credit for it; otherwise it may incur charges.
 5. Key pair: create/download a `.pem` key.
 6. Network:
    - Auto-assign public IP: **Enable**
@@ -117,7 +117,7 @@ Create systemd override file:
 sudo mkdir -p /etc/systemd/system/myapp.service.d
 sudo tee /etc/systemd/system/myapp.service.d/override.conf >/dev/null <<'EOF'
 [Service]
-Environment="ConnectionStrings__Default=Server=YOUR_RDS_ENDPOINT,1433;Database=MyAppDb;User Id=admin;Password=YOUR_RDS_PASSWORD;TrustServerCertificate=True;Encrypt=True"
+Environment="ConnectionStrings__Default=Server=YOUR_RDS_ENDPOINT,1433;Database=MyAppDb;User Id=admin;Password=YOUR_RDS_PASSWORD;Encrypt=True;TrustServerCertificate=False"
 Environment="Jwt__Key=REPLACE_WITH_STRONG_32BYTE_BASE64_KEY"
 Environment="ASPNETCORE_ENVIRONMENT=Production"
 EOF
@@ -130,8 +130,8 @@ Generate JWT key example:
 openssl rand -base64 32
 ```
 
-> `TrustServerCertificate=True` should be used only for temporary setup/testing.  
-> For production, configure proper CA trust/certificate validation and remove this flag.
+> If TLS validation fails during early setup, you can temporarily switch to `TrustServerCertificate=True` only for testing.  
+> Before production use, switch back to `TrustServerCertificate=False` with proper CA/certificate validation.
 
 ---
 
@@ -188,7 +188,7 @@ Copy output, then on EC2:
 ```bash
 mkdir -p ~/.ssh
 chmod 700 ~/.ssh
-echo "PASTE_PUBLIC_KEY_HERE" >> ~/.ssh/authorized_keys
+grep -qxF "PASTE_PUBLIC_KEY_HERE" ~/.ssh/authorized_keys || echo "PASTE_PUBLIC_KEY_HERE" >> ~/.ssh/authorized_keys
 chmod 600 ~/.ssh/authorized_keys
 ```
 
