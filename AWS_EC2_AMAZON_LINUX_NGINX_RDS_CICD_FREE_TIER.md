@@ -59,6 +59,8 @@ ssh -i your-key.pem ec2-user@YOUR_EC2_PUBLIC_IP
 ### Step 2.2 — Update packages
 ```bash
 sudo dnf update -y
+sudo dnf install -y ca-certificates
+sudo update-ca-trust
 ```
 
 ### Step 2.3 — Install .NET 8 SDK + runtime
@@ -189,11 +191,10 @@ Copy output, then on EC2:
 ```bash
 mkdir -p ~/.ssh
 chmod 700 ~/.ssh
-# Replace the value below with the real key text from github-actions-deploy-key.pub:
-PUBLIC_KEY="PASTE_PUBLIC_KEY_HERE"
-grep -qxF "$PUBLIC_KEY" ~/.ssh/authorized_keys || echo "$PUBLIC_KEY" >> ~/.ssh/authorized_keys
+nano ~/.ssh/authorized_keys
 chmod 600 ~/.ssh/authorized_keys
 ```
+Paste the public key on a new line, then save and exit.
 
 Set GitHub secret `SSH_PRIVATE_KEY` to content of `github-actions-deploy-key`.
 
