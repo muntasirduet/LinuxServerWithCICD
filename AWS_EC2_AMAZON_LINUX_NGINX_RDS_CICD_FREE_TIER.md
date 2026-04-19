@@ -2,7 +2,7 @@
 
 This guide is a **step-by-step** setup for running this project on **AWS Free Tier** using:
 
-- EC2 (Amazon Linux)
+- EC2 (Amazon Linux 2023)
 - RDS (SQL Server Express, Free Tier eligible)
 - Nginx
 - GitHub Actions CI/CD
@@ -15,7 +15,7 @@ This guide is a **step-by-step** setup for running this project on **AWS Free Ti
 1. Open AWS Console → **EC2** → **Launch instance**.
 2. Name: `myapp-ec2`.
 3. AMI: **Amazon Linux 2023**.
-4. Instance type: **t3.micro** (or t2.micro where available).
+4. Instance type: **t3.micro** (use **t2.micro** only if t3.micro is unavailable in your selected region/account).
 5. Key pair: create/download a `.pem` key.
 6. Network:
    - Auto-assign public IP: **Enable**
@@ -34,7 +34,7 @@ This guide is a **step-by-step** setup for running this project on **AWS Free Ti
 5. DB instance identifier: `myappdb`.
 6. Master username: `admin`.
 7. Set a strong master password and save it.
-8. DB instance class: **db.t3.micro**.
+8. DB instance class: **db.t3.micro** (or **db.t2.micro** if db.t3.micro is not available).
 9. Storage: default (Free Tier value).
 10. Connectivity:
     - VPC: same VPC as EC2
@@ -62,7 +62,7 @@ sudo dnf update -y
 
 ### Step 2.3 — Install .NET 8 SDK + runtime
 ```bash
-sudo rpm -Uvh https://packages.microsoft.com/config/centos/7/packages-microsoft-prod.rpm
+sudo rpm -Uvh https://packages.microsoft.com/config/rhel/8/packages-microsoft-prod.rpm
 sudo dnf install -y dotnet-sdk-8.0 aspnetcore-runtime-8.0
 dotnet --info
 ```
@@ -91,7 +91,7 @@ sudo chown -R myapp:myapp /var/www/myapp /var/log/myapp
 
 ```bash
 cd /opt/src
-git clone https://github.com/muntasirduet/LinuxServerWithCICD.git myapp
+git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git myapp
 cd /opt/src/myapp
 
 dotnet restore
@@ -102,6 +102,9 @@ dotnet publish src/MyApp.Api -c Release -o ./publish --no-build
 sudo rsync -av --delete ./publish/ /var/www/myapp/
 sudo chown -R myapp:myapp /var/www/myapp
 ```
+
+> Replace the clone URL with your own repository/fork URL.
+> If your API project path is not `src/MyApp.Api`, update the publish command path accordingly.
 
 ---
 
@@ -118,12 +121,15 @@ Environment="Jwt__Key=REPLACE_WITH_STRONG_32BYTE_BASE64_KEY"
 Environment="ASPNETCORE_ENVIRONMENT=Production"
 EOF
 sudo chmod 600 /etc/systemd/system/myapp.service.d/override.conf
+sudo systemctl daemon-reload
 ```
 
 Generate JWT key example:
 ```bash
 openssl rand -base64 32
 ```
+
+> `TrustServerCertificate=True` is convenient for initial setup but skips full certificate validation. For stricter production security, configure trusted CA cert validation and remove this flag.
 
 ---
 
