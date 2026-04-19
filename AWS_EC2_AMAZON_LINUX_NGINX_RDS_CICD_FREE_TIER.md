@@ -15,8 +15,8 @@ This guide is a **step-by-step** setup for running this project on **AWS Free Ti
 1. Open AWS Console → **EC2** → **Launch instance**.
 2. Name: `myapp-ec2`.
 3. AMI: **Amazon Linux 2023**.
-4. Instance type: **t2.micro** (Free Tier safe default).  
-   Choose t3.micro only if your account has a specific free offer/credit for it; otherwise it may incur charges.
+4. Instance type: **t2.micro** (Free Tier default).  
+   In regions/accounts where t2.micro is unavailable, AWS Free Tier may allow **t3.micro**.
 5. Key pair: create/download a `.pem` key.
 6. Network:
    - Auto-assign public IP: **Enable**
@@ -130,8 +130,8 @@ Generate JWT key example:
 openssl rand -base64 32
 ```
 
-> If TLS validation fails during early setup, you can temporarily switch to `TrustServerCertificate=True` only for testing.  
-> Before production use, switch back to `TrustServerCertificate=False` with proper CA/certificate validation.
+> For stronger security, store DB/JWT secrets in **AWS Secrets Manager** or **SSM Parameter Store** and inject them at deploy/runtime.  
+> Keep `TrustServerCertificate=False` in production and ensure system CA trust is up to date for RDS certificate validation.
 
 ---
 
@@ -188,6 +188,7 @@ Copy output, then on EC2:
 ```bash
 mkdir -p ~/.ssh
 chmod 700 ~/.ssh
+# Replace PASTE_PUBLIC_KEY_HERE with your real .pub key text before running:
 grep -qxF "PASTE_PUBLIC_KEY_HERE" ~/.ssh/authorized_keys || echo "PASTE_PUBLIC_KEY_HERE" >> ~/.ssh/authorized_keys
 chmod 600 ~/.ssh/authorized_keys
 ```
