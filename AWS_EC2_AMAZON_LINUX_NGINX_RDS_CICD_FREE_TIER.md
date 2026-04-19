@@ -15,7 +15,8 @@ This guide is a **step-by-step** setup for running this project on **AWS Free Ti
 1. Open AWS Console → **EC2** → **Launch instance**.
 2. Name: `myapp-ec2`.
 3. AMI: **Amazon Linux 2023**.
-4. Instance type: **t3.micro** (use **t2.micro** only if t3.micro is unavailable in your selected region/account).
+4. Instance type: **t2.micro** (Free Tier safe default).  
+   If your account/region supports free t3.micro offers, you can choose t3.micro.
 5. Key pair: create/download a `.pem` key.
 6. Network:
    - Auto-assign public IP: **Enable**
@@ -34,7 +35,7 @@ This guide is a **step-by-step** setup for running this project on **AWS Free Ti
 5. DB instance identifier: `myappdb`.
 6. Master username: `admin`.
 7. Set a strong master password and save it.
-8. DB instance class: **db.t3.micro** (or **db.t2.micro** if db.t3.micro is not available).
+8. DB instance class: **db.t2.micro** (Free Tier safe default).
 9. Storage: default (Free Tier value).
 10. Connectivity:
     - VPC: same VPC as EC2
@@ -129,7 +130,8 @@ Generate JWT key example:
 openssl rand -base64 32
 ```
 
-> `TrustServerCertificate=True` is convenient for initial setup but skips full certificate validation. For stricter production security, configure trusted CA cert validation and remove this flag.
+> `TrustServerCertificate=True` should be used only for temporary setup/testing.  
+> For production, configure proper CA trust/certificate validation and remove this flag.
 
 ---
 
@@ -217,8 +219,8 @@ sudo certbot renew --dry-run
 
 ## 10) Free Tier checklist
 
-- Use only **1 EC2 t3.micro/t2.micro**.
-- Use only **1 RDS db.t3.micro SQL Server Express**.
+- Use only **1 EC2 t2.micro** (or only free-tier-eligible type in your account).
+- Use only **1 RDS db.t2.micro SQL Server Express**.
 - Keep storage within free limits.
 - Stop/delete unused resources.
 - Monitor billing in AWS Billing Dashboard.
