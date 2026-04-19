@@ -132,6 +132,7 @@ openssl rand -base64 32
 
 > For stronger security, store DB/JWT secrets in **AWS Secrets Manager** or **SSM Parameter Store** and inject them at deploy/runtime.  
 > Keep `TrustServerCertificate=False` in production and ensure system CA trust is up to date for RDS certificate validation.
+> Install/update trust store (`ca-certificates`) and follow AWS RDS CA certificate guidance: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.SSL.html
 
 ---
 
@@ -188,8 +189,9 @@ Copy output, then on EC2:
 ```bash
 mkdir -p ~/.ssh
 chmod 700 ~/.ssh
-# Replace PASTE_PUBLIC_KEY_HERE with your real .pub key text before running:
-grep -qxF "PASTE_PUBLIC_KEY_HERE" ~/.ssh/authorized_keys || echo "PASTE_PUBLIC_KEY_HERE" >> ~/.ssh/authorized_keys
+# Replace the value below with the real key text from github-actions-deploy-key.pub:
+PUBLIC_KEY="PASTE_PUBLIC_KEY_HERE"
+grep -qxF "$PUBLIC_KEY" ~/.ssh/authorized_keys || echo "$PUBLIC_KEY" >> ~/.ssh/authorized_keys
 chmod 600 ~/.ssh/authorized_keys
 ```
 
